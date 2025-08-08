@@ -25,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.Arrays;
 import java.util.stream.Collectors;
 
 /**
@@ -34,6 +35,13 @@ public class GitFunctionAnalyzer {
     
     private static final Logger logger = LoggerFactory.getLogger(GitFunctionAnalyzer.class);
     private static final String TARGET_PACKAGE = "com.example.myapp";
+    
+    // File extensions to exclude from analysis
+    private static final Set<String> EXCLUDED_EXTENSIONS = new HashSet<>(Arrays.asList(
+        ".xml", ".properties", ".yml", ".yaml", ".json", ".md", ".txt", 
+        ".gitignore", ".gitattributes", ".DS_Store", ".class", ".jar",
+        ".war", ".ear", ".zip", ".tar", ".gz", ".sql", ".sh", ".bat"
+    ));
     
     private final Repository repository;
     private final JavaParser javaParser;
@@ -90,9 +98,12 @@ public class GitFunctionAnalyzer {
     
     /**
      * Gets list of changed Java files between two commits
+     * Excludes all non-Java files from analysis
      */
     private List<String> getChangedJavaFiles(ObjectId oldId, ObjectId newId) throws IOException, GitAPIException {
         List<String> changedFiles = new ArrayList<>();
+        int totalChangedFiles = 0;
+        int excludedFiles = 0;
         
         try (RevWalk revWalk = new RevWalk(repository);
              ObjectReader reader = repository.newObjectReader()) {
@@ -113,12 +124,38 @@ public class GitFunctionAnalyzer {
             
             for (DiffEntry diff : diffs) {
                 String filePath = diff.getNewPath();
-                if (filePath != null && filePath.endsWith(".java") && 
-                    filePath.contains(TARGET_PACKAGE.replace('.', '/'))) {
-                    changedFiles.add(filePath);
+                totalChangedFiles++;
+                
+                // Skip null paths (deleted files)
+                if (filePath == null) {
+                    excludedFiles++;
+                    continue;
                 }
+                
+                // Exclude non-Java files and other excluded extensions
+                String lowerFilePath = filePath.toLowerCase();
+                boolean isExcluded = EXCLUDED_EXTENSIONS.stream().anyMatch(lowerFilePath::endsWith);
+                
+                if (!filePath.endsWith(".java") || isExcluded) {
+                    logger.debug("Excluding file: {} (non-Java or excluded extension)", filePath);
+                    excludedFiles++;
+                    continue;
+                }
+                
+                // Only include files from the target package
+                if (!filePath.contains(TARGET_PACKAGE.replace('.', '/'))) {
+                    logger.debug("Excluding file outside target package: {}", filePath);
+                    excludedFiles++;
+                    continue;
+                }
+                
+                logger.debug("Including Java file for analysis: {}", filePath);
+                changedFiles.add(filePath);
             }
         }
+        
+        logger.info("File filtering complete. Total changed files: {}, Excluded: {}, Java files for analysis: {}", 
+                   totalChangedFiles, excludedFiles, changedFiles.size());
         
         return changedFiles;
     }
@@ -173,24 +210,36 @@ public class GitFunctionAnalyzer {
      * Gets file content for a specific commit
      */
     private String getFileContent(String filePath, ObjectId commitId) throws IOException {
+        logger.debug("Getting file content for: {} at commit: {}", filePath, commitId.getName());
+        
         try (RevWalk revWalk = new RevWalk(repository);
              ObjectReader reader = repository.newObjectReader()) {
             
             RevCommit commit = revWalk.parseCommit(commitId);
-            CanonicalTreeParser treeParser = new CanonicalTreeParser();
-            treeParser.reset(reader, commit.getTree());
             
-            // Find the file in the tree
-            while (treeParser.next() != null) {
-                String entryPath = treeParser.getEntryPathString();
-                if (entryPath.equals(filePath)) {
-                    // Read file content
-                    byte[] content = reader.open(treeParser.getEntryObjectId()).getBytes();
+            // Use a more efficient approach to find the file
+            try {
+                // Try to get the file directly from the tree
+                ObjectId treeId = commit.getTree().getId();
+                org.eclipse.jgit.treewalk.TreeWalk treeWalk = new org.eclipse.jgit.treewalk.TreeWalk(repository);
+                treeWalk.addTree(treeId);
+                treeWalk.setRecursive(true);
+                treeWalk.setFilter(org.eclipse.jgit.treewalk.filter.PathFilter.create(filePath));
+                
+                if (treeWalk.next()) {
+                    logger.debug("Found file: {}", filePath);
+                    byte[] content = reader.open(treeWalk.getObjectId(0)).getBytes();
+                    treeWalk.close();
                     return new String(content);
+                } else {
+                    logger.debug("File not found: {}", filePath);
+                    treeWalk.close();
+                    return null;
                 }
+            } catch (Exception e) {
+                logger.warn("Error finding file {}: {}", filePath, e.getMessage());
+                return null;
             }
-            
-            return null; // File not found
         }
     }
     
