@@ -4,13 +4,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
     private static final Logger log = LoggerFactory.getLogger(Main.class);
+    private static final AtomicBoolean shutdownInProgress = new AtomicBoolean(false);
     
     public static void main(String[] args) {
+        // Add shutdown hook to handle JGit cleanup
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if (shutdownInProgress.compareAndSet(false, true)) {
+                log.info("Shutting down Git Function Analyzer...");
+                // Give JGit threads time to finish
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }));
+        
         log.info("Starting Git Function Analyzer");
         
         // Check if we have the required arguments

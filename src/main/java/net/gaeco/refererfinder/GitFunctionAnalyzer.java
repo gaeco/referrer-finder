@@ -402,7 +402,11 @@ public class GitFunctionAnalyzer {
      */
     public void close() {
         if (repository != null) {
-            repository.close();
+            try {
+                repository.close();
+            } catch (Exception e) {
+                logger.warn("Error closing repository: {}", e.getMessage());
+            }
         }
     }
     
