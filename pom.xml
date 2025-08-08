@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.example</groupId>
-    <artifactId>referer-finder</artifactId>
+    <artifactId>referrer-finder</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -119,7 +119,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
-                    <mainClass>net.gaeco.refererfinder.Main</mainClass>
+                    <mainClass>net.gaeco.referrerfinder.Main</mainClass>
                     <cleanupDaemonThreads>false</cleanupDaemonThreads>
                     <systemProperties>
                         <systemProperty>

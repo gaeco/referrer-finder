@@ -1,1 +1,1 @@
-mvn exec:java -Dexec.mainClass="net.gaeco.refererfinder.Main" -Dexec.args=". 3e363adc 10f91ed0"
+mvn exec:java -Dexec.mainClass="net.gaeco.referrerfinder.Main" -Dexec.args=". 3e363adc 10f91ed0"

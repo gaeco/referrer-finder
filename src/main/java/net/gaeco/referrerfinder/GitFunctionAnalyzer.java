@@ -1,4 +1,4 @@
-package net.gaeco.refererfinder;
+package net.gaeco.referrerfinder;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;

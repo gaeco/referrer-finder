@@ -1,6 +1,6 @@
 package com.example.myapp.service;
 
-import net.gaeco.refererfinder.GitFunctionAnalyzer;
+import net.gaeco.referrerfinder.GitFunctionAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
