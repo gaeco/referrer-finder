@@ -1,0 +1,31 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Project Rules  
+
+- **Introduction**  
+  - This project implements an utility
+    - extract the function list which is changed between 2 git commits.
+    - the changed function should be classified by DELETED, CHANGED, ADDED
+
+- **Build Platform**: Maven
+  - build command : mvn
+
+### Rules for the `referer-finder` Module  
+- **Java Source Path**: `./referer-finder/src/main/java`   
+- **Java Test Source Path**: `./referer-finder/src/test/java` 
+
+#### **Java Package Structure**  
+- **Base Package**: `net.gaeco.refererfinder`
+
+#### **Java Package Details** 
+```
+referer-finder/src/main/java
+      └──  /net/gaeco/refererfinder # Finding changed functions from "/com/example/myapp"
+      └── /com/example/myapp # compared classes
+        ├── controller/                    # Spring @Controller
+        ├── service/                    # Spring @Service
+        └── vo/              # Value Objects
+```

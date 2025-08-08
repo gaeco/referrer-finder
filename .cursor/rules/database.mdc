@@ -1,0 +1,9 @@
+---
+description: Database 규칙
+globs: 
+alwaysApply: false
+---
+
+# Database Rules
+
+  - DBMS : MariaDB 10.11.11
