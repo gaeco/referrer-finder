@@ -285,14 +285,28 @@ public class GitFunctionAnalyzer {
      * Checks if a function has changed between two versions
      */
     private boolean hasFunctionChanged(String filePath, String functionName, String oldContent, String newContent) {
-        // Simple implementation - in a real scenario, you'd want more sophisticated comparison
-        // This checks if the method signature or body has changed
+        // Check if the method signature or body has changed
         
         try {
             Set<String> oldMethodSignatures = extractMethodSignatures(oldContent, functionName);
             Set<String> newMethodSignatures = extractMethodSignatures(newContent, functionName);
             
-            return !oldMethodSignatures.equals(newMethodSignatures);
+            // First check if signatures are different
+            if (!oldMethodSignatures.equals(newMethodSignatures)) {
+                logger.debug("Function {} signature changed", functionName);
+                return true;
+            }
+            
+            // If signatures are the same, check if method body has changed
+            Set<String> oldMethodBodies = extractMethodBodies(oldContent, functionName);
+            Set<String> newMethodBodies = extractMethodBodies(newContent, functionName);
+            
+            if (!oldMethodBodies.equals(newMethodBodies)) {
+                logger.debug("Function {} body changed", functionName);
+                return true;
+            }
+            
+            return false;
         } catch (Exception e) {
             logger.warn("Failed to compare function changes for {}: {}", functionName, e.getMessage());
             return false;
@@ -338,6 +352,49 @@ public class GitFunctionAnalyzer {
         }
         
         return signatures;
+    }
+    
+    /**
+     * Extracts method bodies for comparison
+     */
+    private Set<String> extractMethodBodies(String javaContent, String functionName) {
+        Set<String> bodies = new HashSet<>();
+        
+        if (javaContent == null || javaContent.trim().isEmpty()) {
+            return bodies;
+        }
+        
+        try {
+            ParseResult<CompilationUnit> parseResult = javaParser.parse(javaContent);
+            
+            if (parseResult.isSuccessful() && parseResult.getResult().isPresent()) {
+                CompilationUnit cu = parseResult.getResult().get();
+                
+                cu.accept(new VoidVisitorAdapter<Void>() {
+                    @Override
+                    public void visit(MethodDeclaration n, Void arg) {
+                        super.visit(n, arg);
+                        
+                        String className = n.findAncestor(ClassOrInterfaceDeclaration.class)
+                                         .map(ClassOrInterfaceDeclaration::getNameAsString)
+                                         .orElse("");
+                        String methodName = n.getNameAsString();
+                        
+                        if ((className + "." + methodName).equals(functionName)) {
+                            // Extract the method body (everything between the braces)
+                            if (n.getBody().isPresent()) {
+                                String body = n.getBody().get().toString();
+                                bodies.add(body);
+                            }
+                        }
+                    }
+                }, null);
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to extract method bodies: {}", e.getMessage());
+        }
+        
+        return bodies;
     }
     
     /**
