@@ -1,5 +1,7 @@
 package com.example.myapp.controller;
 
+import com.example.myapp.service.CallerService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
@@ -18,16 +20,17 @@ import java.util.HashMap;
 public class CallerController {
 
     private static final Logger logger = LoggerFactory.getLogger(CallerController.class);
+    
+    @Autowired
+    private CallerService callerService;
 
     /**
      * Health check endpoint
      */
     @GetMapping("/health")
-    public ResponseEntity<Map<String, String>> health() {
+    public ResponseEntity<Map<String, Object>> health() {
         logger.info("Health check requested");
-        Map<String, String> response = new HashMap<>();
-        response.put("status", "UP");
-        response.put("service", "Caller");
+        Map<String, Object> response = callerService.performHealthCheck();
         return ResponseEntity.ok(response);
     }
 
@@ -42,17 +45,21 @@ public class CallerController {
                    request.get("oldCommit"), request.get("newCommit"));
         
         try {
-            // TODO: Implement the actual analysis logic
-            Map<String, Object> response = new HashMap<>();
-            response.put("status", "success");
-            response.put("message", "Analysis completed");
-            response.put("oldCommit", request.get("oldCommit"));
-            response.put("newCommit", request.get("newCommit"));
+            String oldCommit = request.get("oldCommit");
+            String newCommit = request.get("newCommit");
             
-            // Placeholder for actual results
-            response.put("addedFunctions", new String[0]);
-            response.put("deletedFunctions", new String[0]);
-            response.put("changedFunctions", new String[0]);
+            if (oldCommit == null || newCommit == null) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("status", "error");
+                errorResponse.put("message", "Both oldCommit and newCommit are required");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            Map<String, Object> response = callerService.analyzeFunctionChanges(oldCommit, newCommit);
+            
+            if ("error".equals(response.get("status"))) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+            }
             
             return ResponseEntity.ok(response);
             
@@ -71,12 +78,7 @@ public class CallerController {
     @GetMapping("/repository")
     public ResponseEntity<Map<String, Object>> getRepositoryInfo() {
         logger.info("Repository info requested");
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("repository", "caller");
-        response.put("description", "Utility to find changed functions between git commits");
-        
+        Map<String, Object> response = callerService.getRepositoryInfo();
         return ResponseEntity.ok(response);
     }
 }
