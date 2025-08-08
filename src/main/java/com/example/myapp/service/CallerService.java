@@ -46,7 +46,7 @@ public class CallerService {
             result.put("deletedFunctions", analysisResult.getDeletedFunctions().toArray(new String[0]));
             result.put("changedFunctions", analysisResult.getChangedFunctions().toArray(new String[0]));
             
-            logger.info("Service: Analysis completed successfully");
+            logger.info("Service: Analysis completed successfully..");
             
         } catch (Exception e) {
             logger.error("Service: Error analyzing function changes", e);
