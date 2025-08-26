@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.myapp.mapper.UserMapper">
+
+    <!-- Result Map for User entity -->
+    <resultMap id="UserResultMap" type="com.example.myapp.vo.User">
+        <id column="user_id" property="userId" jdbcType="BIGINT"/>
+        <result column="username" property="username" jdbcType="VARCHAR"/>
+        <result column="email" property="email" jdbcType="VARCHAR"/>
+        <result column="full_name" property="fullName" jdbcType="VARCHAR"/>
+        <result column="created_date" property="createdDate" jdbcType="TIMESTAMP"/>
+        <result column="updated_date" property="updatedDate" jdbcType="TIMESTAMP"/>
+        <result column="is_active" property="isActive" jdbcType="BOOLEAN"/>
+    </resultMap>
+
+    <!-- Base columns for User queries -->
+    <sql id="Base_Column_List">
+        user_id, username, email, full_name, created_date, updated_date, is_active
+    </sql>
+
+    <!-- Insert a new user -->
+    <insert id="insertUser" parameterType="com.example.myapp.vo.User" useGeneratedKeys="true" keyProperty="userId">
+        INSERT INTO users (
+            username, 
+            email, 
+            full_name, 
+            created_date, 
+            updated_date, 
+            is_active
+        ) VALUES (
+            #{username}, 
+            #{email}, 
+            #{fullName}, 
+            NOW(), 
+            NOW(), 
+            #{isActive}
+        )
+    </insert>
+
+    <!-- Select user by ID -->
+    <select id="selectUserById" parameterType="long" resultMap="UserResultMap">
+        SELECT 
+        <include refid="Base_Column_List"/>
+        FROM users 
+        WHERE user_id = #{userId}
+    </select>
+
+    <!-- Select user by username -->
+    <select id="selectUserByUsername" parameterType="string" resultMap="UserResultMap">
+        SELECT 
+        <include refid="Base_Column_List"/>
+        FROM users 
+        WHERE username = #{username}
+    </select>
+
+    <!-- Select all active users -->
+    <select id="selectAllActiveUsers" resultMap="UserResultMap">
+        SELECT 
+        <include refid="Base_Column_List"/>
+        FROM users 
+        WHERE is_active = true
+        ORDER BY created_date DESC
+    </select>
+
+    <!-- Dynamic query to find users with optional filters -->
+    <select id="findUsersByCriteria" parameterType="map" resultMap="UserResultMap">
+        SELECT 
+        <include refid="Base_Column_List"/>
+        FROM users 
+        <where>
+            <if test="username != null and username != ''">
+                AND username LIKE CONCAT('%', #{username}, '%')
+            </if>
+            <if test="email != null and email != ''">
+                AND email LIKE CONCAT('%', #{email}, '%')
+            </if>
+            <if test="fullName != null and fullName != ''">
+                AND full_name LIKE CONCAT('%', #{fullName}, '%')
+            </if>
+            <if test="isActive != null">
+                AND is_active = #{isActive}
+            </if>
+            <if test="startDate != null">
+                AND created_date >= #{startDate}
+            </if>
+            <if test="endDate != null">
+                AND created_date &lt;= #{endDate}
+            </if>
+        </where>
+        ORDER BY created_date DESC
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+        <if test="offset != null">
+            OFFSET #{offset}
+        </if>
+    </select>
+
+    <!-- Update user information -->
+    <update id="updateUser" parameterType="com.example.myapp.vo.User">
+        UPDATE users 
+        SET 
+            username = #{username},
+            email = #{email},
+            full_name = #{fullName},
+            updated_date = NOW(),
+            is_active = #{isActive}
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- Soft delete user (set is_active to false) -->
+    <update id="deactivateUser" parameterType="long">
+        UPDATE users 
+        SET 
+            is_active = false,
+            updated_date = NOW()
+        WHERE user_id = #{userId}
+    </update>
+
+    <!-- Hard delete user -->
+    <delete id="deleteUser" parameterType="long">
+        DELETE FROM users 
+        WHERE user_id = #{userId}
+    </delete>
+
+    <!-- Count total users -->
+    <select id="countUsers" resultType="long">
+        SELECT COUNT(*) FROM users
+    </select>
+
+    <!-- Count active users -->
+    <select id="countActiveUsers" resultType="long">
+        SELECT COUNT(*) FROM users WHERE is_active = true
+    </select>
+
+    <!-- Batch insert users -->
+    <insert id="batchInsertUsers" parameterType="list">
+        INSERT INTO users (
+            username, 
+            email, 
+            full_name, 
+            created_date, 
+            updated_date, 
+            is_active
+        ) VALUES 
+        <foreach collection="list" item="user" separator=",">
+            (
+                #{user.username}, 
+                #{user.email}, 
+                #{user.fullName}, 
+                NOW(), 
+                NOW(), 
+                #{user.isActive}
+            )
+        </foreach>
+    </insert>
+
+    <!-- Select users with pagination -->
+    <select id="selectUsersWithPagination" parameterType="map" resultMap="UserResultMap">
+        SELECT 
+        <include refid="Base_Column_List"/>
+        FROM users 
+        ORDER BY created_date DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+</mapper>
